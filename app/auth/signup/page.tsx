@@ -1,14 +1,13 @@
-'use client'; // Ensure this page is rendered client-side
-
+'use client'
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation'; // Import from 'next/navigation' in Next.js 13+
+import { useRouter } from 'next/navigation';
+import { Github } from 'lucide-react';
 
 const SignUp = () => {
-  const router = useRouter(); // useRouter from next/navigation
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // Sign up with GitHub OAuth
   const signUpWithGitHub = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -21,22 +20,39 @@ const SignUp = () => {
       return;
     }
 
-    // Redirect after successful signup
-    router.push('/'); // Redirect to the homepage after signup
+    router.push('/');
   };
 
   return (
-    <div className="min-h-screen bg-primary flex items-center justify-center">
-      <div className="bg-background p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center text-primary mb-4">Sign Up</h1>
-        
-        <button
-          className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition-colors duration-300"
-          onClick={signUpWithGitHub}
-          disabled={loading}
-        >
-          {loading ? 'Signing Up...' : 'Sign Up with GitHub'}
-        </button>
+    <div className="min-h-screen dark:bg-neutral-900 dark:text-white bg-neutral-200 flex items-center justify-center p-4">
+      <div className="dark:bg-neutral-800  bg-neutral-500 rounded-2xl shadow-2xl w-full max-w-md p-10 border dark:border-neutral-700 border:neutral-400">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold dark:text-white text-neutral-800 mb-2">Welcome</h1>
+          <p className="dark:text-neutral-400 text-neutral-200">Sign up to get started</p>
+        </div>
+
+        <div className="space-y-4">
+          <button
+            className="w-full flex items-center justify-center gap-3 bg-neutral-700 text-white py-3 px-4 rounded-lg 
+            hover:bg-neutral-600 transition-colors duration-300 ease-in-out 
+            focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-opacity-50
+            disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={signUpWithGitHub}
+            disabled={loading}
+          >
+            <Github className="w-6 h-6" />
+            {loading ? 'Signing Up...' : 'Continue with GitHub'}
+          </button>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="dark:text-neutral-500 text-neutral-700 text-sm">
+            By signing up, you agree to our{' '}
+            <a href="#" className="dark:text-neutral-300 text-neutral-800 hover:text-white transition-colors">
+              Terms of Service
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

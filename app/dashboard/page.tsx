@@ -2,18 +2,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 import { 
   User, 
   Briefcase, 
   MapPin, 
   Link as LinkIcon, 
   Twitter, 
-  Github,
+ 
   LinkedinIcon as LinkedIn,
   ChevronRight,
   Edit,
   Save,
-  X
+  X,
+
+  PhoneCallIcon
 } from 'lucide-react';
 import StatisticsCard from '../components/dashboardComp/StatisticsCard';
 
@@ -35,6 +38,7 @@ interface UserProfile {
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [editedProfile, setEditedProfile] = useState<Record<string, string | null>>({});
 
@@ -164,62 +168,76 @@ const UserDashboard = () => {
   return (
     <div className="min-h-screen bg-neutral-200 dark:bg-darkBackground p-6 ">
       <div className="max-w-6xl mx-auto space-y-6 mt-10">
-        {/* Profile Header */}
-        <div className="bg-neutral-400 dark:bg-darkBox rounded-xl shadow-lg overflow-hidden">
-          <div className="p-6 dark:bg-darkBox dark:text-white text-neutral-900 relative">
-            <div className="absolute top-4 right-4 flex space-x-2">
-              {!isEditing ? (
-                <button 
-                  onClick={() => {
-                    setEditedProfile({...userProfile});
-                    setIsEditing(true);
-                  }}
-                  className="bg-white/20  rounded-full p-2 hover:bg-white/30 transition"
-                >
-                  <Edit className="w-6 h-6" />
-                </button>
-              ) : (
-                <>
-                  <button 
-                    onClick={handleSaveProfile}
-                    className="bg-green-500/20 rounded-full p-2 hover:bg-green-500/30 transition"
-                  >
-                    <Save className="w-6 h-6 text-white" />
-                  </button>
-                  <button 
-                    onClick={handleCancelEdit}
-                    className="bg-red-500/20 rounded-full p-2 hover:bg-red-500/30 transition"
-                  >
-                    <X className="w-6 h-6 text-white" />
-                  </button>
-                </>
-              )}
-            </div>
-            <div className="flex items-center space-x-6">
-              <img 
-                src={userProfile.avatar_url || '/default-avatar.png'} 
-                alt="User Avatar" 
-                className="w-24 h-24 rounded-full border-4 border-white/30 object-cover"
-              />
-              <div>
-                <h1 className="text-3xl font-bold mb-2">
-                  {!isEditing ? (userProfile?.name || 'User') : (
-                    <input 
-                      type="text"
-                      name="name"
-                      value={editedProfile.name || ''}
-                      onChange={handleInputChange}
-                      className="bg-white/20 dark:text-white text-neutral-800 px-2 py-1 rounded w-full"
-                      placeholder="Enter your name"
-                    />
-                  )}
-                </h1>
-                <p className="opacity-80">{userProfile.email}</p>
-              </div>
-            </div>
-          </div>
+      <div className="bg-neutral-400 dark:bg-darkBox rounded-xl shadow-lg overflow-hidden">
+      <div className="p-3 xs:p-4 sm:p-6 dark:bg-darkBox dark:text-white text-neutral-900 relative">
+        {/* Edit and My Blogs Buttons */}
+        <div className="absolute top-4 right-4 xs:top-4 xs:right-4 flex space-x-1 xs:space-x-2 lg:gap-2 md:gap-2 ">
+          {!isEditing ? (
+            <>
+              <button
+                onClick={() => {
+                  setEditedProfile({...userProfile});
+                  setIsEditing(true);
+                }}
+                className="bg-white/20 rounded-full p-2 xs:p-3 hover:bg-white/30 transition"
+              >
+                <Edit className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6" />
+              </button>
+              <button
+                onClick={() => router.push('/userblog')}
+                className="bg-blue-500/20 rounded-md p-2 xs:p-3  hover:bg-blue-500/30 transition text-xs xs:text-sm"
+              >
+                My Blogs
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleSaveProfile}
+                className="bg-green-500/20 rounded-full p-1 xs:p-2 hover:bg-green-500/30 transition"
+              >
+                <Save className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 text-white" />
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="bg-red-500/20 rounded-full p-1 xs:p-2 hover:bg-red-500/30 transition"
+              >
+                <X className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 text-white" />
+              </button>
+            </>
+          )}
         </div>
 
+        {/* Profile Content */}
+        <div className="flex flex-col xs:flex-row items-center space-y-2 xs:space-y-0 xs:space-x-4 sm:space-x-6">
+          {/* Avatar */}
+          <img
+            src={userProfile.avatar_url || '/default-avatar.png'}
+            alt="User Avatar"
+            className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white/30 object-cover"
+          />
+
+          {/* User Info */}
+          <div className="text-center xs:text-left w-full">
+            <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold mb-1 xs:mb-2">
+              {!isEditing ? (
+                userProfile?.name || 'User'
+              ) : (
+                <input
+                  type="text"
+                  name="name"
+                  value={editedProfile.name || ''}
+                  onChange={handleInputChange}
+                  className="bg-white/20 dark:text-white text-neutral-800 px-2 py-1 rounded w-full text-center xs:text-left text-base xs:text-lg"
+                  placeholder="Enter your name"
+                />
+              )}
+            </h1>
+            <p className="text-sm xs:text-base opacity-80">{userProfile.email}</p>
+          </div>
+        </div>
+      </div>
+    </div>
         {/* Dashboard Grid */}
         <div className="grid md:grid-cols-3 gap-6">
           {/* Profile Details Card */}
@@ -231,9 +249,9 @@ const UserDashboard = () => {
             <div className="grid md:grid-cols-2 gap-4 ">
               {[
                 { 
-                  icon: Github, 
-                  label: 'GitHub', 
-                  name: 'login',
+                  icon: PhoneCallIcon, 
+                  label: 'Phone number', 
+                  name: 'Phone number',
                   value: userProfile.login 
                 },
                 { 

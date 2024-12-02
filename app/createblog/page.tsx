@@ -1,21 +1,27 @@
-'use client'
-import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; 
-import { 
-  FileText, 
-  ImagePlus, 
-  Tag, 
-  Save, 
-  X, 
-  Loader2 
-} from 'lucide-react';
-import { useAuth } from '@/lib/context/AuthContext';
-import { supabase } from '@/lib/supabaseClient';
+"use client";
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import {
+  FileText,
+  ImagePlus,
+  Tag,
+  Save,
+  X,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { useAuth } from "@/lib/context/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
+import { marked } from "marked";
 
 // Utility functions
 function dataURItoBlob(dataURI: string) {
-  const byteString = atob(dataURI.split(',')[1]);
-  const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+  const byteString = atob(dataURI.split(",")[1]);
+  const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
   const arrayBuffer = new ArrayBuffer(byteString.length);
   const uintArray = new Uint8Array(arrayBuffer);
   for (let i = 0; i < byteString.length; i++) {
@@ -25,21 +31,97 @@ function dataURItoBlob(dataURI: string) {
 }
 
 const detectContentType = (dataURI: string) => {
-  return dataURI.split(',')[0].split(':')[1].split(';')[0];
+  return dataURI.split(",")[0].split(":")[1].split(";")[0];
+};
+
+const markdownToHtml = (markdown: string): string => {
+  // Create a temporary div to render markdown as HTML
+  const tempDiv = document.createElement("div");
+
+  // Use ReactDOMServer to render markdown to HTML (you'll need to import this)
+  import("react-dom/server").then((ReactDOMServer) => {
+    tempDiv.innerHTML = ReactDOMServer.renderToStaticMarkup(
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+        {markdown}
+      </ReactMarkdown>
+    );
+  });
+
+  return tempDiv.innerHTML;
 };
 
 const CreateBlogPage = () => {
   const { user } = useAuth();
   const router = useRouter();
 
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [currentTag, setCurrentTag] = useState('');
+  const [currentTag, setCurrentTag] = useState("");
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [imagePreviewModal, setImagePreviewModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [createdAt, setCreatedAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setCreatedAt(new Date()); // Initialize the createdAt timestamp
+  }, []);
+
+  const handlePasteContent = (
+    event: React.ClipboardEvent<HTMLTextAreaElement>
+  ) => {
+    const pastedText = event.clipboardData.getData("text");
+    setContent((prev) => prev + pastedText);
+  };
+
+  const handlePasteImage = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = event.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (typeof reader.result === "string") {
+              // Validate image type and size
+              const img = new Image();
+              img.onload = () => {
+                const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+                const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+
+                if (!allowedTypes.includes(blob.type)) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    image: "Only JPEG, JPG, and PNG images are allowed.",
+                  }));
+                  return;
+                }
+
+                if (blob.size > maxSizeInBytes) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    image: "Image must be less than 5MB.",
+                  }));
+                  return;
+                }
+
+                // If validation passes, set the cover image
+                setCoverImage(reader.result as string);
+                setErrors((prev) => ({ ...prev, image: undefined }));
+              };
+              img.src = reader.result as string;
+            }
+          };
+          reader.readAsDataURL(blob);
+          break; // Stop after the first image is found
+        }
+      }
+    }
+  };
 
   // Error state for form validation
   const [errors, setErrors] = useState<{
@@ -53,31 +135,31 @@ const CreateBlogPage = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
+        if (typeof reader.result === "string") {
           // Validate image type and size
           const img = new Image();
           img.onload = () => {
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+            const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
             const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
 
             if (!allowedTypes.includes(file.type)) {
-              setErrors(prev => ({
-                ...prev, 
-                image: 'Only JPEG, JPG, and PNG images are allowed.'
+              setErrors((prev) => ({
+                ...prev,
+                image: "Only JPEG, JPG, and PNG images are allowed.",
               }));
               return;
             }
 
             if (file.size > maxSizeInBytes) {
-              setErrors(prev => ({
-                ...prev, 
-                image: 'Image must be less than 5MB.'
+              setErrors((prev) => ({
+                ...prev,
+                image: "Image must be less than 5MB.",
               }));
               return;
             }
 
             setCoverImage(reader.result as string);
-            setErrors(prev => ({...prev, image: undefined}));
+            setErrors((prev) => ({ ...prev, image: undefined }));
           };
           img.src = reader.result as string;
         }
@@ -89,24 +171,24 @@ const CreateBlogPage = () => {
   const addTag = () => {
     const trimmedTag = currentTag.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags(prev => [...prev, trimmedTag]);
-      setCurrentTag('');
+      setTags((prev) => [...prev, trimmedTag]);
+      setCurrentTag("");
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
   const validateForm = () => {
-    const newErrors: {title?: string, content?: string} = {};
+    const newErrors: { title?: string; content?: string } = {};
 
     if (!title.trim()) {
-      newErrors.title = 'Title is required';
+      newErrors.title = "Title is required";
     }
 
     if (!content.trim()) {
-      newErrors.content = 'Content is required';
+      newErrors.content = "Content is required";
     }
 
     setErrors(newErrors);
@@ -115,12 +197,20 @@ const CreateBlogPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form before submission
     if (!validateForm()) return;
 
     if (!user) {
-      alert('Please log in to create a blog post.');
+      alert("Please log in to create a blog post.");
+      return;
+    }
+
+    // Additional content validation
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
+      setErrors((prev) => ({ ...prev, content: "Content cannot be empty" }));
+      console.error("Content is empty");
       return;
     }
 
@@ -134,7 +224,7 @@ const CreateBlogPage = () => {
         const contentType = detectContentType(coverImage);
 
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('blog-images')
+          .from("blog-images")
           .upload(fileName, dataURItoBlob(coverImage), {
             contentType: contentType,
           });
@@ -145,32 +235,49 @@ const CreateBlogPage = () => {
           return;
         }
 
-        imageUrl = supabase.storage.from('blog-images').getPublicUrl(fileName).data.publicUrl;
+        imageUrl = supabase.storage.from("blog-images").getPublicUrl(fileName)
+          .data.publicUrl;
       }
 
+      // Convert Markdown to Plain Text (more conservative approach)
+      const plainTextContent = trimmedContent
+        // Remove headers like # or ## from the start of the line
+        .replace(/^#+\s*/gm, "") // Removes '#' (headers)
+        // Remove Markdown italic and bold syntax
+        .replace(/\*\*([^\*]+)\*\*/g, "$1") // Bold
+        .replace(/\*([^\*]+)\*/g, "$1") // Italic
+        // Remove Markdown links [text](url)
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Links
+        // Optionally: Remove extra newlines or replace them with spaces
+        .replace(/\n+/g, " ") // Removes multiple line breaks, replace with a single space
+        .trim();
+
+      // Optionally store the original Markdown content in `markdown_content` if needed
       const blogPost = {
         title,
-        content,
+        content: plainTextContent, // Save plain text content
+        markdown_content: content, // Optionally store original Markdown content
         tags,
         cover_image: imageUrl,
         author_id: user?.id,
         created_at: new Date(),
+        is_public: isPublic,
       };
 
-      const { data, error } = await supabase.from('blogs').insert([blogPost]);
+      const { data, error } = await supabase.from("blogs").insert([blogPost]);
 
       if (error) {
+        console.error("Submission Error:", error);
         alert(`Submission Error: ${error.message}`);
         setIsSubmitting(false);
         return;
       }
 
       // Success notification or redirect
-      
-      router.push('/userblog');
-
+      router.push("/userblog");
     } catch (err) {
-      alert('An unexpected error occurred.');
+      console.error("Unexpected error:", err);
+      alert("An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
     }
@@ -182,16 +289,16 @@ const CreateBlogPage = () => {
       {imagePreviewModal && coverImage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[80vh] relative">
-            <button 
+            <button
               onClick={() => setImagePreviewModal(false)}
               className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-10"
             >
               <X size={24} />
             </button>
-            <img 
-              src={coverImage} 
-              alt="Cover Preview" 
-              className="w-full h-full object-contain rounded-lg max-h-[70vh]" 
+            <img
+              src={coverImage}
+              alt="Cover Preview"
+              className="w-full h-full object-contain rounded-lg max-h-[70vh]"
             />
           </div>
         </div>
@@ -222,8 +329,9 @@ const CreateBlogPage = () => {
                 accept="image/*"
                 className="hidden"
               />
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
+                onPaste={handlePasteImage} // Attach the paste handler
                 className="group relative w-full h-64 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary transition-all cursor-pointer flex items-center justify-center"
               >
                 {coverImage ? (
@@ -250,23 +358,24 @@ const CreateBlogPage = () => {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <ImagePlus
-                      className="mx-auto h-12 w-12 text-gray-400 group-hover:text-primary"
-                    />
+                    <ImagePlus className="mx-auto h-12 w-12 text-gray-400 group-hover:text-primary" />
                     <p className="mt-2 text-sm text-gray-600 group-hover:text-primary">
-                      Click to upload cover image
+                      Click to upload cover image or paste an image here
                     </p>
                   </div>
                 )}
               </div>
+
               {errors.image && (
                 <p className="text-red-500 text-sm mt-2">{errors.image}</p>
               )}
             </div>
-
             {/* Title Input */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="title"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Blog Title
               </label>
               <input
@@ -274,27 +383,69 @@ const CreateBlogPage = () => {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className={`mt-1 block w-full border text-black border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${errors.title ? 'border-red-500' : ''}`}
+                className={`mt-1 block w-full border text-black border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                  errors.title ? "border-red-500" : ""
+                }`}
                 placeholder="Enter your blog title"
               />
               {errors.title && (
                 <p className="text-red-500 text-sm mt-2">{errors.title}</p>
               )}
             </div>
-
             {/* Content Input */}
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-                Blog Content
+              <label
+                htmlFor="content"
+                className=" text-sm font-medium text-gray-700 flex items-center justify-between"
+              >
+                <span>Blog Content</span>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    className="flex items-center text-sm text-primary hover:bg-primary/10 px-2 py-1 rounded"
+                  >
+                    {isPreviewMode ? (
+                      <>
+                        <FileText className="mr-1" size={16} /> Edit
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="mr-1" size={16} /> Preview
+                      </>
+                    )}
+                  </button>
+                </div>
               </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={10}
-                className={`mt-1 block w-full text-black border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${errors.content ? 'border-red-500' : ''}`}
-                placeholder="Write your blog post here..."
-              />
+              {isPreviewMode ? (
+                <div className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 prose max-w-full">
+                  {content ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      className="text-black"
+                    >
+                      {content}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-black italic">No content to preview</p>
+                  )}
+                </div>
+              ) : (
+                <textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onPaste={handlePasteContent}
+                  rows={10}
+                  className={`mt-1 block w-full text-black border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                    errors.content ? "border-red-500" : ""
+                  }`}
+                  placeholder="Write your blog post here... (Markdown supported)"
+                />
+              )}
+              <p className="text-sm text-gray-500 mt-1">
+                Tip: You can use Markdown formatting and paste content directly
+              </p>
               {errors.content && (
                 <p className="text-red-500 text-sm mt-2">{errors.content}</p>
               )}
@@ -310,7 +461,12 @@ const CreateBlogPage = () => {
                   type="text"
                   value={currentTag}
                   onChange={(e) => setCurrentTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault(); // Prevent form submission
+                      addTag();
+                    }
+                  }}
                   className="flex-grow border text-black border-gray-300 rounded-l-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   placeholder="Add tags (Press Enter to add)"
                 />
@@ -322,18 +478,17 @@ const CreateBlogPage = () => {
                   <Tag size={20} />
                 </button>
               </div>
-
               {/* Tag List */}
               {tags?.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {tags.map((tag) => (
-                    <span 
-                      key={tag} 
+                    <span
+                      key={tag}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary"
                     >
                       {tag}
-                      <button 
-                        onClick={() => removeTag(tag)} 
+                      <button
+                        onClick={() => removeTag(tag)}
                         className="ml-2 hover:text-red-600"
                       >
                         <X size={16} />
@@ -345,7 +500,24 @@ const CreateBlogPage = () => {
                 <p className="text-sm text-gray-500">No tags added yet.</p>
               )}
             </div>
-
+            {/* privacy toggle  */}
+            <div className="flex items-center mb-4">
+              <button
+                type="button"
+                onClick={() => setIsPublic(!isPublic)}
+                className="flex items-center text-sm text-primary hover:bg-primary/10 px-2 py-1 rounded"
+              >
+                {isPublic ? (
+                  <>
+                    <Eye className="mr-1" size={16} /> Public
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="mr-1" size={16} /> Private
+                  </>
+                )}
+              </button>
+            </div>
             {/* Submit Button */}
             <div className="pt-6">
               <button

@@ -12,7 +12,7 @@ const extendedFeatures = [
   {
     title: "AI-Powered Writing Assistant",
     description: "Intelligent suggestions and real-time editing to elevate your writing.",
-    icon: <Lightbulb className="w-12 h-12 text-blue-600" />,
+    icon: <Lightbulb className="w-12 h-12 text-blue-600 " />,
     color: "bg-blue-50"
   },
   {
@@ -49,13 +49,13 @@ const extendedFeatures = [
 
 const FeatureSection = () => {
   return (
-    <section id="features" className="py-16 bg-white">
+    <section id="features" className="py-16 bg-white dark:bg-neutral-900/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <header className="text-center mb-12 space-y-4">
-          <h2 className="text-4xl font-bold text-gray-900 tracking-tight">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
             Advanced Features for Writers
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-neutral-200 max-w-2xl mx-auto italic">
             Empower your writing journey with our comprehensive toolkit designed to transform your creative process
           </p>
         </header>
@@ -71,7 +71,8 @@ const FeatureSection = () => {
                 flex 
                 flex-col 
                 items-center 
-                text-center 
+                text-center
+                dark:bg-neutral-600/90 
                 space-y-4 
                 border 
                 border-transparent 
@@ -85,13 +86,13 @@ const FeatureSection = () => {
                 group
               `}
             >
-              <div className="p-4 rounded-full bg-white shadow-md group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 ease-in-out">
+              <div className="p-4 rounded-full bg-white dark:bg-neutral-700/60 shadow-md group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 ease-in-out">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 transition-colors duration-300 group-hover:text-blue-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-neutral-900 transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-emerald-800">
                 {feature.title}
               </h3>
-              <p className="text-gray-600 text-sm transition-colors duration-300">
+              <p className="text-gray-600 dark:text-neutral-400 text-[1rem] transition-colors duration-300">
                 {feature.description}
               </p>
             </div>
